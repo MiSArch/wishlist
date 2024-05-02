@@ -1,6 +1,6 @@
 use async_graphql::SimpleObject;
 
-use crate::{base_connection::BaseConnection, wishlist::Wishlist};
+use super::{super::wishlist::Wishlist, base_connection::BaseConnection};
 
 /// A connection of Wishlists.
 #[derive(SimpleObject)]

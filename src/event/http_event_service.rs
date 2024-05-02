@@ -4,7 +4,7 @@ use log::info;
 use mongodb::Collection;
 use serde::{Deserialize, Serialize};
 
-use crate::{foreign_types::ProductVariant, user::User};
+use crate::graphql::model::{foreign_types::ProductVariant, user::User};
 
 /// Data to send to Dapr in order to describe a subscription.
 #[derive(Serialize)]
@@ -64,6 +64,9 @@ pub async fn list_topic_subscriptions() -> Result<Json<Vec<Pubsub>>, StatusCode>
 }
 
 /// HTTP endpoint to receive events.
+///
+/// * `state` - Service state containing database connections.
+/// * `event` - Event handled by endpoint.
 #[debug_handler(state = HttpEventServiceState)]
 pub async fn on_topic_event(
     State(state): State<HttpEventServiceState>,
@@ -89,6 +92,9 @@ pub async fn on_topic_event(
 }
 
 /// Add a newly created product variant to MongoDB.
+///
+/// * `collection` - MongoDB collection to add newly created product to.
+/// * `id` - UUID of newly created product.
 pub async fn add_product_variant_to_mongodb(
     collection: Collection<ProductVariant>,
     id: Uuid,
@@ -101,6 +107,9 @@ pub async fn add_product_variant_to_mongodb(
 }
 
 /// Add a newly created user to MongoDB.
+///
+/// * `collection` - MongoDB collection to add newly created user to.
+/// * `id` - UUID of newly created user.
 pub async fn add_user_to_mongodb(collection: Collection<User>, id: Uuid) -> Result<(), StatusCode> {
     let user = User { _id: id };
     match collection.insert_one(user, None).await {

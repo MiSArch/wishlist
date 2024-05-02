@@ -9,15 +9,14 @@ use mongodb::{
     Collection, Database,
 };
 
-use crate::authentication::authenticate_user;
-use crate::query::query_user;
-use crate::user::User;
-use crate::{
-    foreign_types::ProductVariant,
-    mutation_input_structs::{CreateWishlistInput, UpdateWishlistInput},
-    query::query_wishlist,
-    wishlist::Wishlist,
-};
+use crate::authorization::authorize_user;
+
+use super::model::foreign_types::ProductVariant;
+use super::model::user::User;
+use super::model::wishlist::Wishlist;
+use super::mutation_input_structs::CreateWishlistInput;
+use super::mutation_input_structs::UpdateWishlistInput;
+use super::query::query_object;
 
 /// Describes GraphQL wishlist mutations.
 pub struct Mutation;
@@ -32,7 +31,7 @@ impl Mutation {
         ctx: &Context<'a>,
         #[graphql(desc = "CreateWishlistInput")] input: CreateWishlistInput,
     ) -> Result<Wishlist> {
-        authenticate_user(&ctx, input.user_id)?;
+        authorize_user(&ctx, Some(input.user_id))?;
         let db_client = ctx.data::<Database>()?;
         let collection: Collection<Wishlist> = db_client.collection::<Wishlist>("wishlists");
         validate_input(db_client, &input).await?;
@@ -53,7 +52,7 @@ impl Mutation {
         match collection.insert_one(wishlist, None).await {
             Ok(result) => {
                 let id = uuid_from_bson(result.inserted_id)?;
-                query_wishlist(&collection, id).await
+                query_object(&collection, id).await
             }
             Err(_) => Err(Error::new("Adding wishlist failed in MongoDB.")),
         }
@@ -69,8 +68,8 @@ impl Mutation {
     ) -> Result<Wishlist> {
         let db_client = ctx.data::<Database>()?;
         let collection: Collection<Wishlist> = db_client.collection::<Wishlist>("wishlists");
-        let wishlist = query_wishlist(&collection, input.id).await?;
-        authenticate_user(&ctx, wishlist.user._id)?;
+        let wishlist = query_object(&collection, input.id).await?;
+        authorize_user(&ctx, Some(wishlist.user._id))?;
         let product_variant_collection: Collection<ProductVariant> =
             db_client.collection::<ProductVariant>("product_variants");
         let current_timestamp = DateTime::now();
@@ -82,7 +81,7 @@ impl Mutation {
         )
         .await?;
         update_name(&collection, &input, &current_timestamp).await?;
-        query_wishlist(&collection, input.id).await
+        query_object(&collection, input.id).await
     }
 
     /// Deletes wishlist of id.
@@ -93,8 +92,8 @@ impl Mutation {
     ) -> Result<bool> {
         let db_client = ctx.data::<Database>()?;
         let collection: Collection<Wishlist> = db_client.collection::<Wishlist>("wishlists");
-        let wishlist = query_wishlist(&collection, id).await?;
-        authenticate_user(&ctx, wishlist.user._id)?;
+        let wishlist = query_object(&collection, id).await?;
+        authorize_user(&ctx, Some(wishlist.user._id))?;
         if let Err(_) = collection.delete_one(doc! {"_id": id }, None).await {
             let message = format!("Deleting wishlist of id: `{}` failed in MongoDB.", id);
             return Err(Error::new(message));
@@ -106,6 +105,8 @@ impl Mutation {
 /// Extracts UUID from Bson.
 ///
 /// Adding a wishlist returns a UUID in a Bson document. This function helps to extract the UUID.
+///
+/// * `bson` - Bson document to extract UUID from.
 fn uuid_from_bson(bson: Bson) -> Result<Uuid> {
     match bson {
         Bson::Binary(id) => Ok(id.to_uuid()?),
@@ -122,7 +123,9 @@ fn uuid_from_bson(bson: Bson) -> Result<Uuid> {
 /// Updates product variant ids of a wishlist.
 ///
 /// * `collection` - MongoDB collection to update.
+/// * `product_variant_collection` - MongoDB product variant collection used for product variant validation.
 /// * `input` - `UpdateWishlistInput`.
+/// * `current_timestamp` - Timestamp of product variant ids update.
 async fn update_product_variant_ids(
     collection: &Collection<Wishlist>,
     product_variant_collection: &Collection<ProductVariant>,
@@ -148,6 +151,7 @@ async fn update_product_variant_ids(
 ///
 /// * `collection` - MongoDB collection to update.
 /// * `input` - `UpdateWishlistInput`.
+/// * `current_timestamp` - Timestamp of name update.
 async fn update_name(
     collection: &Collection<Wishlist>,
     input: &UpdateWishlistInput,
@@ -173,6 +177,9 @@ async fn update_name(
 }
 
 /// Checks if product variants and user in CreateWishlistInput are in the system (MongoDB database populated with events).
+///
+/// * `db_client` - MongoDB database client.
+/// * `input` - `UpdateWishlistInput`.
 async fn validate_input(db_client: &Database, input: &CreateWishlistInput) -> Result<()> {
     let product_variant_collection: Collection<ProductVariant> =
         db_client.collection::<ProductVariant>("product_variants");
@@ -185,6 +192,9 @@ async fn validate_input(db_client: &Database, input: &CreateWishlistInput) -> Re
 /// Checks if product variants are in the system (MongoDB database populated with events).
 ///
 /// Used before adding or modifying product variants / wishlists.
+///
+/// * `collection` - MongoDB collection to validate against.
+/// * `product_variant_ids` - Product variant UUIDs to validate.
 async fn validate_product_variant_ids(
     collection: &Collection<ProductVariant>,
     product_variant_ids: &HashSet<Uuid>,
@@ -218,6 +228,9 @@ async fn validate_product_variant_ids(
 /// Checks if user is in the system (MongoDB database populated with events).
 ///
 /// Used before adding wishlists.
+///
+/// * `collection` - MongoDB collection to validate against.
+/// * `id` - User UUID to validate.
 async fn validate_user(collection: &Collection<User>, id: Uuid) -> Result<()> {
-    query_user(&collection, id).await.map(|_| ())
+    query_object(&collection, id).await.map(|_| ())
 }

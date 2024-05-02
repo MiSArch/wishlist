@@ -1,16 +1,14 @@
 use std::{cmp::Ordering, collections::HashSet};
 
-use async_graphql::{
-    ComplexObject, Result, SimpleObject,
-};
+use async_graphql::{ComplexObject, Result, SimpleObject};
 use bson::datetime::DateTime;
 use bson::Uuid;
 use serde::{Deserialize, Serialize};
 
-use crate::{
+use super::{
+    connection::product_variant_connection::ProductVariantConnection,
     foreign_types::ProductVariant,
     order_datatypes::{CommonOrderInput, OrderDirection},
-    product_variant_connection::ProductVariantConnection,
     user::User,
 };
 
@@ -67,9 +65,9 @@ impl Wishlist {
     }
 }
 
-/// Sorts vector of product variants according to BaseOrder.
+/// Sorts product variants according to BaseOrder.
 ///
-/// * `product_variants` - Vector of product variants to sort.
+/// * `product_variants` - Product variants to sort.
 /// * `order_by` - Specifies order of sorted result.
 fn sort_product_variants(
     product_variants: &mut Vec<ProductVariant>,
@@ -77,12 +75,20 @@ fn sort_product_variants(
 ) {
     let comparator: fn(&ProductVariant, &ProductVariant) -> bool =
         match order_by.unwrap_or_default().direction.unwrap_or_default() {
-            OrderDirection::Asc => |x, y| x < y,
-            OrderDirection::Desc => |x, y| x > y,
+            OrderDirection::Asc => {
+                |first_product_variant, second_product_variant: &ProductVariant| {
+                    first_product_variant < second_product_variant
+                }
+            }
+            OrderDirection::Desc => |first_product_variant, second_product_variant| {
+                first_product_variant > second_product_variant
+            },
         };
-    product_variants.sort_by(|x, y| match comparator(x, y) {
-        true => Ordering::Less,
-        false => Ordering::Greater,
+    product_variants.sort_by(|first_product_variant, second_product_variant| {
+        match comparator(first_product_variant, second_product_variant) {
+            true => Ordering::Less,
+            false => Ordering::Greater,
+        }
     });
 }
 

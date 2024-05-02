@@ -1,4 +1,5 @@
 use async_graphql::{OutputType, SimpleObject};
+use mongodb_cursor_pagination::FindResult;
 
 /// A base connection for an OutputType.
 #[derive(SimpleObject)]
@@ -11,8 +12,6 @@ pub struct BaseConnection<T: OutputType> {
     /// The total amount of items in this connection.
     pub total_count: u64,
 }
-
-use mongodb_cursor_pagination::FindResult;
 
 pub struct FindResultWrapper<Node>(pub FindResult<Node>);
 

@@ -18,14 +18,16 @@ impl TryFrom<&HeaderMap> for AuthorizedUserHeader {
     ///
     /// Returns a GraphQL Error if the extraction fails.
     fn try_from(header_map: &HeaderMap) -> Result<Self, Self::Error> {
-        if let Some(authenticate_user_header_value) = header_map.get("Authorized-User") {
-            if let Ok(authenticate_user_header_str) = authenticate_user_header_value.to_str() {
-                let authenticate_user_header: AuthorizedUserHeader =
-                    serde_json::from_str(authenticate_user_header_str)?;
-                return Ok(authenticate_user_header);
+        if let Some(authorized_user_header_value) = header_map.get("Authorized-User") {
+            if let Ok(authorized_user_header_str) = authorized_user_header_value.to_str() {
+                let authorized_user_header: AuthorizedUserHeader =
+                    serde_json::from_str(authorized_user_header_str)?;
+                return Ok(authorized_user_header);
             }
         }
-        Err(Error::new("Authentication failed. Authorized-User header is not set or could not be parsed."))
+        Err(Error::new(
+            "Authentication failed. Authorized-User header is not set or could not be parsed.",
+        ))
     }
 }
 
@@ -40,6 +42,8 @@ enum Role {
 
 impl Role {
     /// Defines if user has a permissive role.
+    ///
+    // * `self` - This role instance.
     fn is_permissive(self) -> bool {
         match self {
             Self::Buyer => false,
@@ -49,11 +53,16 @@ impl Role {
     }
 }
 
-/// Authenticate user of UUID for a Context.
-pub fn authenticate_user(ctx: &Context, id: Uuid) -> Result<()> {
+/// Authorize user of UUID for a Context.
+///
+/// * `context` - GraphQL context containing the AuthorizedUserHeader.
+/// * `id` - Option of UUID of the user to authorize.
+pub fn authorize_user(ctx: &Context, id: Option<Uuid>) -> Result<()> {
     match ctx.data::<AuthorizedUserHeader>() {
-        Ok(authenticate_user_header) => check_permissions(&authenticate_user_header, id),
-        Err(_) => Err(Error::new("Authentication failed. Authorized-User header is not set or could not be parsed.")),
+        Ok(authorized_user_header) => check_permissions(&authorized_user_header, id),
+        Err(_) => Err(Error::new(
+            "Authentication failed. Authorized-User header is not set or could not be parsed.",
+        )),
     }
 }
 
@@ -61,21 +70,27 @@ pub fn authenticate_user(ctx: &Context, id: Uuid) -> Result<()> {
 ///
 /// Permission is valid if the user has `Role::Buyer` and the same UUID as provided in the function parameter.
 /// Permission is valid if the user has a permissive role: `user.is_permissive() == true`, regardless of the users UUID.
+///
+/// * `authorized_user_header` - AuthorizedUserHeader containing the users UUID and Role.
+/// * `id` - Option of UUID of the user to authorize.
 pub fn check_permissions(
-    authenticate_user_header: &AuthorizedUserHeader,
-    id: Uuid,
+    authorized_user_header: &AuthorizedUserHeader,
+    id: Option<Uuid>,
 ) -> Result<()> {
-    if authenticate_user_header
+    let id_contained_in_header = id
+        .and_then(|id| Some(authorized_user_header.id == id))
+        .unwrap_or(false);
+    if authorized_user_header
         .roles
         .iter()
         .any(|r| r.is_permissive())
-        || authenticate_user_header.id == id
+        || id_contained_in_header
     {
         return Ok(());
     } else {
         let message = format!(
             "Authentication failed for user of UUID: `{}`. Operation not permitted.",
-            authenticate_user_header.id
+            authorized_user_header.id
         );
         return Err(Error::new(message));
     }

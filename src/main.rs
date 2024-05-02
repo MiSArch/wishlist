@@ -15,6 +15,7 @@ use axum::{
 };
 use clap::{arg, command, Parser};
 
+use event::http_event_service::{list_topic_subscriptions, on_topic_event, HttpEventServiceState};
 use simple_logger::SimpleLogger;
 
 use log::info;
@@ -22,32 +23,17 @@ use mongodb::{bson::DateTime, options::ClientOptions, Client, Collection, Databa
 
 use bson::Uuid;
 
-mod wishlist;
-use wishlist::Wishlist;
+mod authorization;
+use authorization::AuthorizedUserHeader;
 
-mod query;
-use query::Query;
+mod event;
+mod graphql;
 
-mod mutation;
-use mutation::Mutation;
-
-use foreign_types::ProductVariant;
-
-mod user;
-use user::User;
-
-mod http_event_service;
-use http_event_service::{list_topic_subscriptions, on_topic_event, HttpEventServiceState};
-
-mod authentication;
-use authentication::AuthorizedUserHeader;
-
-mod base_connection;
-mod foreign_types;
-mod mutation_input_structs;
-mod order_datatypes;
-mod product_variant_connection;
-mod wishlist_connection;
+use graphql::{
+    model::{foreign_types::ProductVariant, user::User, wishlist::Wishlist},
+    mutation::Mutation,
+    query::Query,
+};
 
 /// Builds the GraphiQL frontend.
 async fn graphiql() -> impl IntoResponse {
@@ -74,6 +60,8 @@ async fn db_connection() -> Client {
 /// Returns Router that establishes connection to Dapr.
 ///
 /// Adds endpoints to define pub/sub interaction with Dapr.
+///
+/// * `db_client` - MongoDB database client.
 async fn build_dapr_router(db_client: Database) -> Router {
     let product_variant_collection: mongodb::Collection<ProductVariant> =
         db_client.collection::<ProductVariant>("product_variants");
@@ -136,16 +124,20 @@ async fn main() -> std::io::Result<()> {
 ///
 /// Parses the "Authenticate-User" header and writes it in the context data of the specfic request.
 /// Then executes the GraphQL schema with the request.
+///
+/// * `schema` - GraphQL schema used by handler.
+/// * `headers` - HeaderMap containing headers of request.
+/// * `request` - GraphQL request.
 async fn graphql_handler(
     State(schema): State<Schema<Query, Mutation, EmptySubscription>>,
     headers: HeaderMap,
-    req: GraphQLRequest,
+    request: GraphQLRequest,
 ) -> GraphQLResponse {
-    let mut req = req.into_inner();
+    let mut request = request.into_inner();
     if let Ok(authenticate_user_header) = AuthorizedUserHeader::try_from(&headers) {
-        req = req.data(authenticate_user_header);
+        request = request.data(authenticate_user_header);
     }
-    schema.execute(req).await.into()
+    schema.execute(request).await.into()
 }
 
 /// Starts wishlist service on port 8000.

@@ -1,6 +1,6 @@
 use async_graphql::SimpleObject;
 
-use crate::{base_connection::BaseConnection, foreign_types::ProductVariant};
+use super::{super::foreign_types::ProductVariant, base_connection::BaseConnection};
 
 /// A connection of ProductVariants.
 #[derive(SimpleObject)]
