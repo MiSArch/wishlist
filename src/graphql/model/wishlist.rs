@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use super::{
     connection::product_variant_connection::ProductVariantConnection,
     foreign_types::ProductVariant,
-    order_datatypes::{CommonOrderInput, OrderDirection},
+    order_types::{CommonOrderInput, OrderDirection},
     user::User,
 };
 

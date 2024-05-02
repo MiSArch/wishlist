@@ -11,7 +11,7 @@ use super::{
         base_connection::{BaseConnection, FindResultWrapper},
         wishlist_connection::WishlistConnection,
     },
-    order_datatypes::WishlistOrderInput,
+    order_types::WishlistOrderInput,
     wishlist::Wishlist,
 };
 
