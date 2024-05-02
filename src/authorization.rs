@@ -26,7 +26,7 @@ impl TryFrom<&HeaderMap> for AuthorizedUserHeader {
             }
         }
         Err(Error::new(
-            "Authentication failed. Authorized-User header is not set or could not be parsed.",
+            "Authorization failed. Authorized-User header is not set or could not be parsed.",
         ))
     }
 }
