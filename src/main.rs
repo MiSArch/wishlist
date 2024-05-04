@@ -16,9 +16,8 @@ use axum::{
 use clap::{arg, command, Parser};
 
 use event::http_event_service::{list_topic_subscriptions, on_topic_event, HttpEventServiceState};
-use simple_logger::SimpleLogger;
 
-use log::info;
+use log::{info, Level};
 use mongodb::{bson::DateTime, options::ClientOptions, Client, Collection, Database};
 
 use bson::Uuid;
@@ -104,7 +103,7 @@ struct Args {
 /// Activates logger and parses argument for optional schema generation. Otherwise starts gRPC and GraphQL server.
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    SimpleLogger::new().init().unwrap();
+    simple_logger::init_with_level(Level::Warn).unwrap();
 
     let args = Args::parse();
     if args.generate_schema {
