@@ -2,7 +2,7 @@ use async_graphql::SimpleObject;
 
 use super::{super::wishlist::Wishlist, base_connection::BaseConnection};
 
-/// A connection of Wishlists.
+/// A connection of wishlists.
 #[derive(SimpleObject)]
 #[graphql(shareable)]
 pub struct WishlistConnection {
@@ -14,7 +14,7 @@ pub struct WishlistConnection {
     pub total_count: u64,
 }
 
-/// Implementation of conversion from BaseConnection<Wishlist> to WishlistConnection.
+/// Implementation of conversion from `BaseConnection<Wishlist>` to `WishlistConnection`.
 ///
 /// Prevents GraphQL naming conflicts.
 impl From<BaseConnection<Wishlist>> for WishlistConnection {

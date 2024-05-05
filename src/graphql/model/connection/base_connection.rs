@@ -1,7 +1,7 @@
 use async_graphql::{OutputType, SimpleObject};
 use mongodb_cursor_pagination::FindResult;
 
-/// A base connection for an OutputType.
+/// A base connection for an output type.
 #[derive(SimpleObject)]
 #[graphql(shareable)]
 pub struct BaseConnection<T: OutputType> {
@@ -21,7 +21,7 @@ pub struct AdditionalFields {
     total_count: u64,
 }
 
-/// Implementation of conversion from MongoDB pagination to GraphQL Connection.
+/// Implementation of conversion from MongoDB pagination to GraphQL connection.
 impl<Node> From<FindResultWrapper<Node>> for BaseConnection<Node>
 where
     Node: OutputType,

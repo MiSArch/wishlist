@@ -12,7 +12,7 @@ use super::{
     user::User,
 };
 
-/// The Wishlist of a user.
+/// The wishlist of a user.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, SimpleObject)]
 #[graphql(complex)]
 pub struct Wishlist {
@@ -20,11 +20,11 @@ pub struct Wishlist {
     pub _id: Uuid,
     /// User.
     pub user: User,
-    /// Name of Wishlist.
+    /// Name of wishlist.
     pub name: String,
-    /// Timestamp when Wishlist was created.
+    /// Timestamp when wishlist was created.
     pub created_at: DateTime,
-    /// Timestamp when Wishlist was last updated.
+    /// Timestamp when wishlist was last updated.
     pub last_updated_at: DateTime,
     #[graphql(skip)]
     pub internal_product_variants: HashSet<ProductVariant>,
@@ -65,7 +65,7 @@ impl Wishlist {
     }
 }
 
-/// Sorts product variants according to BaseOrder.
+/// Sorts product variants according to base order.
 ///
 /// * `product_variants` - Product variants to sort.
 /// * `order_by` - Specifies order of sorted result.

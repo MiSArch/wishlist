@@ -2,7 +2,7 @@ use async_graphql::SimpleObject;
 
 use super::{super::foreign_types::ProductVariant, base_connection::BaseConnection};
 
-/// A connection of ProductVariants.
+/// A connection of product variants.
 #[derive(SimpleObject)]
 #[graphql(shareable)]
 pub struct ProductVariantConnection {
@@ -14,7 +14,7 @@ pub struct ProductVariantConnection {
     pub total_count: u64,
 }
 
-/// Implementation of conversion from BaseConnection<ProductVariant> to ProductVariantConnection.
+/// Implementation of conversion from `BaseConnection<ProductVariant>` to `ProductVariantConnection`.
 ///
 /// Prevents GraphQL naming conflicts.
 impl From<BaseConnection<ProductVariant>> for ProductVariantConnection {

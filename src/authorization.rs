@@ -3,20 +3,20 @@ use axum::http::HeaderMap;
 use bson::Uuid;
 use serde::Deserialize;
 
-/// Authorized-User HTTP header.
+/// `Authorized-User` HTTP header.
 #[derive(Deserialize, Debug)]
 pub struct AuthorizedUserHeader {
     id: Uuid,
     roles: Vec<Role>,
 }
 
-/// Extraction of AuthorizedUserHeader from HeaderMap.
+/// Extraction of `Authorized-User` header from header map.
 impl TryFrom<&HeaderMap> for AuthorizedUserHeader {
     type Error = Error;
 
-    /// Tries to extract the AuthorizedUserHeader from a HeaderMap.
+    /// Tries to extract the `Authorized-User` header from a header map.
     ///
-    /// Returns a GraphQL Error if the extraction fails.
+    /// Returns a GraphQL error if the extraction fails.
     fn try_from(header_map: &HeaderMap) -> Result<Self, Self::Error> {
         if let Some(authorized_user_header_value) = header_map.get("Authorized-User") {
             if let Ok(authorized_user_header_str) = authorized_user_header_value.to_str() {
@@ -53,9 +53,9 @@ impl Role {
     }
 }
 
-/// Authorize user of UUID for a Context.
+/// Authorize user of UUID for a context.
 ///
-/// * `context` - GraphQL context containing the AuthorizedUserHeader.
+/// * `context` - GraphQL context containing the `Authorized-User` header.
 /// * `id` - Option of UUID of the user to authorize.
 pub fn authorize_user(ctx: &Context, id: Option<Uuid>) -> Result<()> {
     match ctx.data::<AuthorizedUserHeader>() {
@@ -66,12 +66,12 @@ pub fn authorize_user(ctx: &Context, id: Option<Uuid>) -> Result<()> {
     }
 }
 
-/// Check if user of UUID has a valid permission according to the AuthorizedUserHeader.
+/// Check if user of UUID has a valid permission according to the `Authorized-User` header.
 ///
 /// Permission is valid if the user has `Role::Buyer` and the same UUID as provided in the function parameter.
 /// Permission is valid if the user has a permissive role: `user.is_permissive() == true`, regardless of the users UUID.
 ///
-/// * `authorized_user_header` - AuthorizedUserHeader containing the users UUID and Role.
+/// * `authorized_user_header` - `Authorized-User` header containing the users UUID and role.
 /// * `id` - Option of UUID of the user to authorize.
 pub fn check_permissions(
     authorized_user_header: &AuthorizedUserHeader,
@@ -83,7 +83,7 @@ pub fn check_permissions(
     if authorized_user_header
         .roles
         .iter()
-        .any(|r| r.is_permissive())
+        .any(|role| role.is_permissive())
         || id_contained_in_header
     {
         return Ok(());

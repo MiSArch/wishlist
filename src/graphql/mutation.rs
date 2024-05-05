@@ -25,7 +25,7 @@ pub struct Mutation;
 impl Mutation {
     /// Adds a wishlist with a user_id, a list of product_variant_ids and a name.
     ///
-    /// Formats UUIDs as hyphenated lowercase Strings.
+    /// Formats UUIDs as hyphenated lowercase strings.
     async fn create_wishlist<'a>(
         &self,
         ctx: &Context<'a>,
@@ -58,9 +58,9 @@ impl Mutation {
         }
     }
 
-    /// Updates name and/or product_variant_ids of a specific wishlist referenced with an id.
+    /// Updates name and/or product_variant_ids of a specific wishlist referenced with an UUID.
     ///
-    /// Formats UUIDs as hyphenated lowercase Strings.
+    /// Formats UUIDs as hyphenated lowercase strings.
     async fn update_wishlist<'a>(
         &self,
         ctx: &Context<'a>,
@@ -84,7 +84,7 @@ impl Mutation {
         query_object(&collection, input.id).await
     }
 
-    /// Deletes wishlist of id.
+    /// Deletes wishlist of UUID.
     async fn delete_wishlist<'a>(
         &self,
         ctx: &Context<'a>,
@@ -102,11 +102,11 @@ impl Mutation {
     }
 }
 
-/// Extracts UUID from Bson.
+/// Extracts UUID from BSON.
 ///
-/// Adding a wishlist returns a UUID in a Bson document. This function helps to extract the UUID.
+/// Adding a wishlist returns a UUID in a BSON document. This function helps to extract the UUID.
 ///
-/// * `bson` - Bson document to extract UUID from.
+/// * `bson` - BSON document to extract UUID from.
 fn uuid_from_bson(bson: Bson) -> Result<Uuid> {
     match bson {
         Bson::Binary(id) => Ok(id.to_uuid()?),
@@ -124,7 +124,7 @@ fn uuid_from_bson(bson: Bson) -> Result<Uuid> {
 ///
 /// * `collection` - MongoDB collection to update.
 /// * `product_variant_collection` - MongoDB product variant collection used for product variant validation.
-/// * `input` - `UpdateWishlistInput`.
+/// * `input` - Update wishlist input containing product variant ids.
 /// * `current_timestamp` - Timestamp of product variant ids update.
 async fn update_product_variant_ids(
     collection: &Collection<Wishlist>,
@@ -150,7 +150,7 @@ async fn update_product_variant_ids(
 /// Updates name of a wishlist.
 ///
 /// * `collection` - MongoDB collection to update.
-/// * `input` - `UpdateWishlistInput`.
+/// * `input` - Update wishlist input containing new wishlist name.
 /// * `current_timestamp` - Timestamp of name update.
 async fn update_name(
     collection: &Collection<Wishlist>,
@@ -176,10 +176,10 @@ async fn update_name(
     Ok(())
 }
 
-/// Checks if product variants and user in CreateWishlistInput are in the system (MongoDB database populated with events).
+/// Checks if product variants and user in create wishlist input are in the system (MongoDB database populated with events).
 ///
 /// * `db_client` - MongoDB database client.
-/// * `input` - `UpdateWishlistInput`.
+/// * `input` - Create wishlist input containing product variants.
 async fn validate_input(db_client: &Database, input: &CreateWishlistInput) -> Result<()> {
     let product_variant_collection: Collection<ProductVariant> =
         db_client.collection::<ProductVariant>("product_variants");

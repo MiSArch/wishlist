@@ -14,7 +14,7 @@ pub struct Query;
 
 #[Object]
 impl Query {
-    /// Entity resolver for user of specific id.
+    /// Entity resolver for user of specific UUID.
     #[graphql(entity)]
     async fn user_entity_resolver<'a>(
         &self,
@@ -26,7 +26,7 @@ impl Query {
         query_object(&collection, id).await
     }
 
-    /// Retrieves wishlist of specific id.
+    /// Retrieves wishlist of specific UUID.
     async fn wishlist<'a>(
         &self,
         ctx: &Context<'a>,
@@ -39,7 +39,7 @@ impl Query {
         Ok(wishlist)
     }
 
-    /// Entity resolver for wishlist of specific id.
+    /// Entity resolver for wishlist of specific UUID.
     #[graphql(entity)]
     async fn wishlist_entity_resolver<'a>(
         &self,
@@ -54,7 +54,7 @@ impl Query {
     }
 }
 
-/// Shared function to query an object: T from a MongoDB collection of object: T.
+/// Shared function to query an object: `T` from a MongoDB collection of object: `T`.
 ///
 /// * `connection` - MongoDB database connection.
 /// * `id` - UUID of object.

@@ -77,20 +77,6 @@ async fn build_dapr_router(db_client: Database) -> Router {
     app
 }
 
-/// Can be used to insert dummy wishlist data in the MongoDB database.
-#[allow(dead_code)]
-async fn insert_dummy_data(collection: &Collection<Wishlist>) {
-    let wishlists: Vec<Wishlist> = vec![Wishlist {
-        _id: Uuid::new(),
-        user: User { _id: Uuid::new() },
-        internal_product_variants: HashSet::new(),
-        name: String::from("test"),
-        created_at: DateTime::now(),
-        last_updated_at: DateTime::now(),
-    }];
-    collection.insert_many(wishlists, None).await.unwrap();
-}
-
 /// Command line argument to toggle schema generation instead of service execution.
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -121,11 +107,11 @@ async fn main() -> std::io::Result<()> {
 
 /// Describes the handler for GraphQL requests.
 ///
-/// Parses the "Authenticate-User" header and writes it in the context data of the specfic request.
+/// Parses the `Authorized-User` header and writes it in the context data of the specfic request.
 /// Then executes the GraphQL schema with the request.
 ///
 /// * `schema` - GraphQL schema used by handler.
-/// * `headers` - HeaderMap containing headers of request.
+/// * `headers` - Header map containing headers of request.
 /// * `request` - GraphQL request.
 async fn graphql_handler(
     State(schema): State<Schema<Query, Mutation, EmptySubscription>>,
