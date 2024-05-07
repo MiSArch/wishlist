@@ -86,8 +86,8 @@ pub async fn on_topic_event(
 
 /// Add a newly created product variant to MongoDB.
 ///
-/// * `collection` - MongoDB collection to add newly created product to.
-/// * `id` - UUID of newly created product.
+/// * `collection` - MongoDB collection to add newly created product variant to.
+/// * `id` - UUID of newly created product variant.
 pub async fn add_product_variant_to_mongodb(
     collection: Collection<ProductVariant>,
     id: Uuid,
