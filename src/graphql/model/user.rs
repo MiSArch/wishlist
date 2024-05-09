@@ -44,7 +44,7 @@ impl User {
         let sorting_doc = doc! {wishlist_order.field.unwrap_or_default().as_str(): i32::from(wishlist_order.direction.unwrap_or_default())};
         let find_options = FindOptions::builder()
             .skip(skip)
-            .limit(first.map(|first_u32| i64::from(first_u32)))
+            .limit(first.map(|definitely_first| i64::from(definitely_first)))
             .sort(sorting_doc)
             .build();
         let document_collection = collection.clone_with_type::<Document>();
