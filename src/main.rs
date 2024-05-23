@@ -15,39 +15,24 @@ use axum::{
 };
 use clap::{arg, command, Parser};
 
-use simple_logger::SimpleLogger;
+use event::http_event_service::{list_topic_subscriptions, on_topic_event, HttpEventServiceState};
 
-use log::info;
+use log::{info, Level};
 use mongodb::{bson::DateTime, options::ClientOptions, Client, Collection, Database};
 
 use bson::Uuid;
 
-mod wishlist;
-use wishlist::Wishlist;
+mod authorization;
+use authorization::AuthorizedUserHeader;
 
-mod query;
-use query::Query;
+mod event;
+mod graphql;
 
-mod mutation;
-use mutation::Mutation;
-
-use foreign_types::ProductVariant;
-
-mod user;
-use user::User;
-
-mod http_event_service;
-use http_event_service::{list_topic_subscriptions, on_topic_event, HttpEventServiceState};
-
-mod authentication;
-use authentication::AuthorizedUserHeader;
-
-mod base_connection;
-mod foreign_types;
-mod mutation_input_structs;
-mod order_datatypes;
-mod product_variant_connection;
-mod wishlist_connection;
+use graphql::{
+    model::{foreign_types::ProductVariant, user::User, wishlist::Wishlist},
+    mutation::Mutation,
+    query::Query,
+};
 
 /// Builds the GraphiQL frontend.
 async fn graphiql() -> impl IntoResponse {
@@ -74,6 +59,8 @@ async fn db_connection() -> Client {
 /// Returns Router that establishes connection to Dapr.
 ///
 /// Adds endpoints to define pub/sub interaction with Dapr.
+///
+/// * `db_client` - MongoDB database client.
 async fn build_dapr_router(db_client: Database) -> Router {
     let product_variant_collection: mongodb::Collection<ProductVariant> =
         db_client.collection::<ProductVariant>("product_variants");
@@ -90,20 +77,6 @@ async fn build_dapr_router(db_client: Database) -> Router {
     app
 }
 
-/// Can be used to insert dummy wishlist data in the MongoDB database.
-#[allow(dead_code)]
-async fn insert_dummy_data(collection: &Collection<Wishlist>) {
-    let wishlists: Vec<Wishlist> = vec![Wishlist {
-        _id: Uuid::new(),
-        user: User { _id: Uuid::new() },
-        internal_product_variants: HashSet::new(),
-        name: String::from("test"),
-        created_at: DateTime::now(),
-        last_updated_at: DateTime::now(),
-    }];
-    collection.insert_many(wishlists, None).await.unwrap();
-}
-
 /// Command line argument to toggle schema generation instead of service execution.
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -116,7 +89,7 @@ struct Args {
 /// Activates logger and parses argument for optional schema generation. Otherwise starts gRPC and GraphQL server.
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    SimpleLogger::new().init().unwrap();
+    simple_logger::init_with_level(Level::Warn).unwrap();
 
     let args = Args::parse();
     if args.generate_schema {
@@ -134,18 +107,22 @@ async fn main() -> std::io::Result<()> {
 
 /// Describes the handler for GraphQL requests.
 ///
-/// Parses the "Authenticate-User" header and writes it in the context data of the specfic request.
+/// Parses the `Authorized-User` header and writes it in the context data of the specfic request.
 /// Then executes the GraphQL schema with the request.
+///
+/// * `schema` - GraphQL schema used by handler.
+/// * `headers` - Header map containing headers of request.
+/// * `request` - GraphQL request.
 async fn graphql_handler(
     State(schema): State<Schema<Query, Mutation, EmptySubscription>>,
     headers: HeaderMap,
-    req: GraphQLRequest,
+    request: GraphQLRequest,
 ) -> GraphQLResponse {
-    let mut req = req.into_inner();
+    let mut request = request.into_inner();
     if let Ok(authenticate_user_header) = AuthorizedUserHeader::try_from(&headers) {
-        req = req.data(authenticate_user_header);
+        request = request.data(authenticate_user_header);
     }
-    schema.execute(req).await.into()
+    schema.execute(request).await.into()
 }
 
 /// Starts wishlist service on port 8000.

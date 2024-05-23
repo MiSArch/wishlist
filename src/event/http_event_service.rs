@@ -4,7 +4,7 @@ use log::info;
 use mongodb::Collection;
 use serde::{Deserialize, Serialize};
 
-use crate::{foreign_types::ProductVariant, user::User};
+use crate::graphql::model::{foreign_types::ProductVariant, user::User};
 
 /// Data to send to Dapr in order to describe a subscription.
 #[derive(Serialize)]
@@ -28,14 +28,14 @@ impl Default for TopicEventResponse {
     }
 }
 
-/// Relevant part of Dapr event wrapped in a CloudEnvelope.
+/// Relevant part of Dapr event wrapped in a cloud envelope.
 #[derive(Deserialize, Debug)]
 pub struct Event {
     pub topic: String,
     pub data: EventData,
 }
 
-/// Relevant part of Dapr event.data.
+/// Relevant part of Dapr event data.
 #[derive(Deserialize, Debug)]
 pub struct EventData {
     pub id: Uuid,
@@ -64,6 +64,9 @@ pub async fn list_topic_subscriptions() -> Result<Json<Vec<Pubsub>>, StatusCode>
 }
 
 /// HTTP endpoint to receive events.
+///
+/// * `state` - Service state containing database connections.
+/// * `event` - Event handled by endpoint.
 #[debug_handler(state = HttpEventServiceState)]
 pub async fn on_topic_event(
     State(state): State<HttpEventServiceState>,
@@ -76,19 +79,15 @@ pub async fn on_topic_event(
             add_product_variant_to_mongodb(state.product_variant_collection, event.data.id).await?
         }
         "user/user/created" => add_user_to_mongodb(state.user_collection, event.data.id).await?,
-        _ => {
-            // TODO: This message can be used for further Error visibility.
-            let _message = format!(
-                "Event of topic: `{}` is not a handleable by this service.",
-                event.topic.as_str()
-            );
-            return Err(StatusCode::INTERNAL_SERVER_ERROR);
-        }
+        _ => return Err(StatusCode::INTERNAL_SERVER_ERROR)
     }
     Ok(Json(TopicEventResponse::default()))
 }
 
 /// Add a newly created product variant to MongoDB.
+///
+/// * `collection` - MongoDB collection to add newly created product variant to.
+/// * `id` - UUID of newly created product variant.
 pub async fn add_product_variant_to_mongodb(
     collection: Collection<ProductVariant>,
     id: Uuid,
@@ -101,6 +100,9 @@ pub async fn add_product_variant_to_mongodb(
 }
 
 /// Add a newly created user to MongoDB.
+///
+/// * `collection` - MongoDB collection to add newly created user to.
+/// * `id` - UUID of newly created user.
 pub async fn add_user_to_mongodb(collection: Collection<User>, id: Uuid) -> Result<(), StatusCode> {
     let user = User { _id: id };
     match collection.insert_one(user, None).await {
